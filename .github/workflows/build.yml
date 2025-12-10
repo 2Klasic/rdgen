@@ -1,0 +1,39 @@
+name: Build Custom RustDesk Client
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+    env:
+      RENDEZVOUS_SERVER: ${{ secrets.RENDEZVOUS_SERVER }}
+      RELAY_SERVER: ${{ secrets.RELAY_SERVER }}
+      RS_PUB_KEY: ${{ secrets.RS_PUB_KEY }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Rust
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          profile: minimal
+          override: true
+
+      - name: Build RustDesk client (release)
+        run: |
+          echo "Embedding server info..."
+          # Create a local config file RustDesk reads at compile time
+          echo "RUSTDESK_RENDEZVOUS_SERVER=${RENDEZVOUS_SERVER}" > .env
+          echo "RUSTDESK_RELAY_SERVER=${RELAY_SERVER}" >> .env
+          echo "RUSTDESK_PUBLIC_KEY=${RS_PUB_KEY}" >> .env
+
+          # Build Windows release binary
+          cargo build --release --target x86_64-pc-windows-gnu
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: rustdesk-custom-client
+          path: target/x86_64-pc-windows-gnu/release/rustdesk.exe
